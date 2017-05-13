@@ -405,27 +405,31 @@ class TendrlNS(object):
             except KeyError:
                 sys.stdout.write("Setup Config for namespace.%s" %
                                  self.ns_name)
-            self.current_ns.config = self.current_ns.objects.Config()
-            NS.config = self.current_ns.config
-
-            # etcd_orm
-            etcd_kwargs = {'port': self.current_ns.config.data['etcd_port'],
-                           'host': self.current_ns.config.data[
-                               "etcd_connection"]}
             try:
-                Event(
-                    Message(
-                        priority="info",
-                        publisher=NS.publisher_id,
-                        payload={"message": "Setup Etcd Orm for namespace.%s" %
-                                            self.ns_name
-                                 }
+                self.current_ns.config = self.current_ns.objects.Config()
+                NS.config = self.current_ns.config
+
+                # etcd_orm
+                etcd_kwargs = {'port': self.current_ns.config.data['etcd_port'],
+                               'host': self.current_ns.config.data[
+                                   "etcd_connection"]}
+                try:
+                    Event(
+                        Message(
+                            priority="info",
+                            publisher=NS.publisher_id,
+                            payload={"message": "Setup Etcd Orm for namespace.%s" %
+                                                self.ns_name
+                                     }
+                        )
                     )
-                )
+                except KeyError:
+                    sys.stdout.write("Setup Etcd Orm for namespace.%s" %
+                                     self.ns_name)
+                NS.etcd_orm = etcdobj.Server(etcd_kwargs=etcd_kwargs)
             except KeyError:
-                sys.stdout.write("Setup Etcd Orm for namespace.%s" %
-                                 self.ns_name)
-            NS.etcd_orm = etcdobj.Server(etcd_kwargs=etcd_kwargs)
+                self.current_ns.config = None
+                NS.config = None
 
         # NodeContext, if the namespace has implemented its own
         if "NodeContext" in self.current_ns.objects:
@@ -442,10 +446,13 @@ class TendrlNS(object):
             except KeyError:
                 sys.stdout.write("Setup NodeContext for namespace. %s" %
                                  self.ns_name)
-
-            self.current_ns.node_context = \
-                self.current_ns.objects.NodeContext()
-            NS.node_context = self.current_ns.node_context
+            try:
+                self.current_ns.node_context = \
+                    self.current_ns.objects.NodeContext()
+                NS.node_context = self.current_ns.node_context
+            except KeyError:
+                self.current_ns.node_context = None
+                NS.node_context = None
 
         # TendrlContext, if the namespace has implemented its own
         if "TendrlContext" in self.current_ns.objects:
@@ -462,10 +469,13 @@ class TendrlNS(object):
             except KeyError:
                 sys.stdout.write("Setup TendrlContext for namespace.%s" %
                                  self.ns_name)
-
-            self.current_ns.tendrl_context = \
-                self.current_ns.objects.TendrlContext()
-            NS.tendrl_context = self.current_ns.tendrl_context
+            try:
+                self.current_ns.tendrl_context = \
+                    self.current_ns.objects.TendrlContext()
+                NS.tendrl_context = self.current_ns.tendrl_context
+            except KeyError:
+                self.current_ns.tendrl_context = None
+                NS.tendrl_context = None
 
     def _create_ns(self):
         ns_map = maps.NamedDict(objects=maps.NamedDict(),
