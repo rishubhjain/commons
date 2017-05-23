@@ -10,7 +10,7 @@ def get_node_ips(parameters):
     return node_ips
 
 
-def create_gluster(parameters):
+def expand_gluster(parameters):
     node_ips = get_node_ips(parameters)
     plugin = NS.gluster_provisioner.get_plugin()
 
@@ -39,14 +39,23 @@ def create_gluster(parameters):
             flow_id=parameters['flow_id'],
             priority="info",
             publisher=NS.publisher_id,
-            payload={"message": "Creating gluster cluster %s" %
-                                parameters['TendrlContext.integration_id']
-                     }
+            payload={
+                "message": "Expanding gluster cluster %s" %
+                parameters['TendrlContext.integration_id']
+            }
         )
     )
-    ret_val = plugin.create_gluster_cluster(node_ips)
-    if ret_val is not True:
-        raise FlowExecutionFailedError("Error creating gluster cluster")
+    failed_nodes = []
+    for node in node_ips:
+        ret_val = plugin.expand_gluster_cluster(node)
+        if not ret_val:
+            failed_nodes.append(node)
+
+    if failed_nodes:
+        raise FlowExecutionFailedError(
+            "Error expanding gluster cluster. Following nodes failed: %s" %
+            ",".join(failed_nodes)
+        )
 
     Event(
         Message(
@@ -54,8 +63,12 @@ def create_gluster(parameters):
             flow_id=parameters['flow_id'],
             priority="info",
             publisher=NS.publisher_id,
-            payload={"message": "Created Gluster Cluster %s" %
-                                parameters['TendrlContext.integration_id']
-                     }
+            payload={
+                "message": "Expanded Gluster Cluster %s."
+                " New nodes are: %s" % (
+                    parameters['TendrlContext.integration_id'],
+                    ",".join(node_ips)
+                )
+            }
         )
     )

@@ -32,11 +32,11 @@ class Logger(object):
                 self._logger(self.message.payload["message"])
 
     def push_operation(self):
-        NS.etcd_orm.client.write(
+        NS._int.wclient.write(
             "/messages/jobs/%s" % self.message.job_id,
             Message.to_json(self.message),
             append=True)
-        NS.etcd_orm.client.refresh(
+        NS._int.client.refresh(
             "/messages/jobs/%s" % self.message.job_id,
             ttl=NS.config.data['message_retention_time']
         )
@@ -48,7 +48,8 @@ class Logger(object):
     def push_message(self):
         if self.message.priority not in ["info", "debug"]:
             # Storing messages cluster wise
-            if self.message.cluster_id is not None:
+            if (self.message.cluster_id is not None) and (
+                self.message.cluster_id != ""):
                 NS.node_agent.objects.ClusterMessage(
                     message_id=self.message.message_id,
                     timestamp=self.message.timestamp,
